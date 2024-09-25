@@ -1,6 +1,114 @@
 ---
 title: tes
 ---
-sfsgsdg
+*Disclaimer: This is my personal learning experience with the Actor programming model.*
 
-sdfgsfg
+## How programming typically looks like[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#how-programming-typically-looks-like)
+
+If you ask any web developer which programming language(s) they use, most will likely say they write code in Javascript/Typescript, PHP, Python, Go, or Ruby.
+
+This code snippet shows how you can write a script that validates URLs using NodeJS.
+
+```
+const urlChecker = (url) => {
+fetch(url)
+      .then((res) => {
+        if (res.status == 200) {
+          console.log(`${url} is valid`)
+        }
+      }).catch(() => { })
+}
+
+const urls = [
+  'https://fadhil-blog.dev',
+  'https://invalid.url'
+]
+
+for (const url of urls) {
+  urlChecker(url)
+}
+
+```
+
+The code is simple and sweet. Basic programming 101, and this programming model works for most cases.
+
+## What is the Actor model[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#what-is-the-actor-model)
+
+I’m skipping the formal introduction of the Actor model, which relates to the mathematical model. If you’re interested in that, you can read its history on [Wikipedia](https://en.wikipedia.org/wiki/Actor_model)
+
+Actor is a concurrency model where you write software that each small unit of your system runs independently and communicates by passing messages. This way, each tiny **Actor** can run on all cores concurrently.
+
+NodeJS has a library called [nact](https://nact.xyz/) that help Node developer to build an Actor-based system in Node. Here’s an example of the same script as above but written in the Actor model in Node:
+
+```
+const { start, dispatch, spawnStateless, spawn } = require('nact');
+const system = start();;
+
+const spawnUrlChecker = (id) => spawnStateless(
+  system,
+  (msg, ctx) => {
+    const url = msg.url
+
+    console.log('validate URL', url)
+    fetch(url)
+      .then((res) => {
+        if (res.status == 200) {
+          dispatch(statefulUrls, { url: url })
+        }
+      }).catch(() => { })
+
+  },
+  `url-${id}`
+)
+
+const statefulUrls = spawn(
+  system,
+  (state = {}, msg, ctx) => {
+    let urls = []
+
+    if (state.urls) {
+      urls = [...state.urls, msg.url]
+    } else {
+      urls = [msg.url]
+    }
+
+    console.log(urls)
+    return { ...state, urls: urls }
+  },
+  'stateful-urls'
+)
+
+let count = 0
+
+const urls = [
+  'https://fadhil-blog.dev',
+  'https://invalid.url'
+]
+
+for (const url of urls) {
+  count += 1
+  const urlChecker = spawnUrlChecker(count)
+  dispatch(urlChecker, { url: url })
+}
+
+```
+
+Running this code sample, you’ll get almost similar results as before. But what’s the difference? In this code sample, you’re
+
+- Instantiate a System actor
+- For each URL, spawn a `spawnUrlChecker` actor.
+  - It will run a fetch request on the URL
+  - If the response is successful, dispatch/send a message to `statefulUrls`
+- `statefulUrls` Actor will keep the list of successful URLs in its state
+
+When using the actor model, people tend to spawn many of them, like thousands or millions.
+
+## Advantages[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#advantages)
+
+- Let it crash. Since each process is isolated, it’s easy to just let that single process crash when there’s an issue with it and retry/ignore it. In contrast to typical programming paradigm, it’s not uncommon to see a runtime error crashing the whole application.
+
+- Avoid locking/coordination work between the processes. Since the processes are isolated, maintain their own state, and do not share data, we can avoid using mutual exclusion/mutex or any locking mechanism.
+
+- The state data is stored in memory, so they are fast for retrieval and mutation. However, there could be a durability issue. You can address this by persisting the state in a data store.
+
+- 
