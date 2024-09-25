@@ -3,13 +3,13 @@ title: tes
 ---
 *Disclaimer: This is my personal learning experience with the Actor programming model.*
 
-## How programming typically looks like[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#how-programming-typically-looks-like)
+## How programming typically looks like
 
 If you ask any web developer which programming language(s) they use, most will likely say they write code in Javascript/Typescript, PHP, Python, Go, or Ruby.
 
 This code snippet shows how you can write a script that validates URLs using NodeJS.
 
-```
+```js
 const urlChecker = (url) => {
 fetch(url)
       .then((res) => {
@@ -27,20 +27,19 @@ const urls = [
 for (const url of urls) {
   urlChecker(url)
 }
-
 ```
 
 The code is simple and sweet. Basic programming 101, and this programming model works for most cases.
 
-## What is the Actor model[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#what-is-the-actor-model)
+## What is the Actor model
 
-I’m skipping the formal introduction of the Actor model, which relates to the mathematical model. If you’re interested in that, you can read its history on [Wikipedia](https://en.wikipedia.org/wiki/Actor_model)
+I'm skipping the formal introduction of the Actor model, which relates to the mathematical model. If you're interested in that, you can read its history on [Wikipedia](https://en.wikipedia.org/wiki/Actor_model)
 
 Actor is a concurrency model where you write software that each small unit of your system runs independently and communicates by passing messages. This way, each tiny **Actor** can run on all cores concurrently.
 
-NodeJS has a library called [nact](https://nact.xyz/) that help Node developer to build an Actor-based system in Node. Here’s an example of the same script as above but written in the Actor model in Node:
+NodeJS has a library called [nact](https://nact.xyz/) that help Node developer to build an Actor-based system in Node. Here's an example of the same script as above but written in the Actor model in Node:
 
-```
+```js
 const { start, dispatch, spawnStateless, spawn } = require('nact');
 const system = start();;
 
@@ -90,10 +89,9 @@ for (const url of urls) {
   const urlChecker = spawnUrlChecker(count)
   dispatch(urlChecker, { url: url })
 }
-
 ```
 
-Running this code sample, you’ll get almost similar results as before. But what’s the difference? In this code sample, you’re
+Running this code sample, you'll get almost similar results as before. But what's the difference? In this code sample, you're
 
 - Instantiate a System actor
 - For each URL, spawn a `spawnUrlChecker` actor.
@@ -103,12 +101,26 @@ Running this code sample, you’ll get almost similar results as before. But wha
 
 When using the actor model, people tend to spawn many of them, like thousands or millions.
 
-## Advantages[\#](https://www.fadhil-blog.dev/blog/nodejs-actor-model/#advantages)
+## Advantages
 
-- Let it crash. Since each process is isolated, it’s easy to just let that single process crash when there’s an issue with it and retry/ignore it. In contrast to typical programming paradigm, it’s not uncommon to see a runtime error crashing the whole application.
-
+- Let it crash. Since each process is isolated, it's easy to just let that single process crash when there's an issue with it and retry/ignore it. In contrast to typical programming paradigm, it's not uncommon to see a runtime error crashing the whole application.
 - Avoid locking/coordination work between the processes. Since the processes are isolated, maintain their own state, and do not share data, we can avoid using mutual exclusion/mutex or any locking mechanism.
-
 - The state data is stored in memory, so they are fast for retrieval and mutation. However, there could be a durability issue. You can address this by persisting the state in a data store.
 
-- 
+<!-- ## Clustering
+
+when deployed to multiple nodes in the cluster, the system must communicate to discover where said process/actor is deployed.
+
+## Messaging Benchmark
+
+since message passinf is a huge part of the system, how fast the message is transfer can determine how good the impelentation is -->
+
+<!-- ## Implementation
+
+Akka, Elixir
+
+## Elixir & Phoenix Framework
+
+Erlang & Elixir is a classic programming language example that popularizes this actor model. In Elixir, you can spawn millions or billions (reference: Sasa Juric talk in 2017 https://www.youtube.com/watch?v=3uJCwcBwfh4&pp=ygUTd2ViIGthbXAgc2FzYSBqdXJpYw%3D%3D). In Erlang/Elixir, a new process/actor is so cheap that the system (using [Ranch](https://github.com/ninenines/ranch)) typically spawns a new ephemeral process/actor every time it receives an HTTP request and a WebSocket connection. If you serve 1,000 requests per second, you're actually spawning 1,000 processes/Actor per second in Erlang/Elixir. Once the request is completed, the process/Actor will be terminated.
+
+This is very different to programming languages like Python (using WSGI) and PHP where we usually start a number of workers (usually by the number of CPU core available in the machine) and those warm workers will share the load to serve the requests. Once the request is completed, the workers will continue to serve other requests in the system queue. -->
